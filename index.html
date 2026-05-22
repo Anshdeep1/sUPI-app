@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>sUPI — Financial OS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0ede6;
+  --nav:#0d0f14;
+  --card:#ffffff;
+  --text:#0d0f14;
+  --muted:#6b6860;
+  --border:#d4d0c8;
+  --blue:#3b6fff;
+  --orange:#ff6b35;
+  --green:#1db954;
+  --purple:#9b59ff;
+  --yellow:#f5c518;
+  --red:#e53935;
+  --cyan:#00c8e8;
+  --font:'Space Grotesk',sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* ─── NAV ─── */
+nav{background:var(--nav);color:#fff;display:flex;align-items:stretch;height:50px;position:sticky;top:0;z-index:200;border-bottom:1px solid #1c2030}
+.nav-logo{padding:0 22px;font-size:17px;font-weight:700;display:flex;align-items:center;border-right:1px solid #1c2030;letter-spacing:-0.5px}
+.nav-logo span{color:var(--blue)}
+.nav-tagline{padding:0 16px;display:flex;align-items:center;font-family:var(--mono);font-size:10px;color:#555;border-right:1px solid #1c2030}
+.nav-tagline b{color:var(--blue)}
+.nav-right{margin-left:auto;display:flex;align-items:stretch}
+.nav-bal{padding:0 18px;display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;border-left:1px solid #1c2030}
+.nav-bal .amt{color:#fff;font-weight:600}
+.nav-bal .lbl{color:#555;font-size:10px}
+.nav-notify{width:50px;display:flex;align-items:center;justify-content:center;border-left:1px solid #1c2030;cursor:pointer;position:relative;font-size:18px}
+.notify-dot{position:absolute;top:10px;right:10px;width:7px;height:7px;border-radius:50%;background:var(--orange);border:1.5px solid var(--nav)}
+
+/* ─── TABS ─── */
+.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg);overflow-x:auto;position:sticky;top:50px;z-index:100}
+.tab{padding:0 22px;height:44px;display:flex;align-items:center;font-size:13px;cursor:pointer;border-right:1px solid var(--border);color:var(--muted);border-bottom:3px solid transparent;transition:.15s;white-space:nowrap;font-weight:500}
+.tab:hover{color:var(--text);background:rgba(0,0,0,.03)}
+.tab.on{color:var(--text);font-weight:700;border-bottom:3px solid var(--blue)}
+.page{display:none}.page.on{display:block}
+
+/* ─── HERO ─── */
+.hero{display:grid;grid-template-columns:1fr 1fr;min-height:calc(100vh - 94px)}
+.hero-l{padding:56px 48px;display:flex;flex-direction:column;justify-content:center;border-right:1px solid var(--border)}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:var(--nav);color:var(--blue);font-family:var(--mono);font-size:10px;padding:5px 12px;border-radius:2px;margin-bottom:28px;width:fit-content}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+.hero-title{font-size:clamp(56px,8vw,104px);font-weight:700;line-height:.93;letter-spacing:-4px;margin-bottom:22px}
+.hero-sub{font-size:15px;color:var(--muted);line-height:1.65;max-width:380px;margin-bottom:32px}
+.hero-btns{display:flex;gap:10px;flex-wrap:wrap}
+.btn-primary{padding:12px 24px;background:var(--nav);color:#fff;border:none;border-radius:4px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:.15s;letter-spacing:-0.3px}
+.btn-primary:hover{background:#1a2035}
+.btn-secondary{padding:12px 24px;background:transparent;color:var(--text);border:1.5px solid var(--border);border-radius:4px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+.btn-secondary:hover{border-color:var(--blue);color:var(--blue)}
+.hero-r{display:flex;align-items:center;justify-content:center;padding:40px;position:relative;overflow:hidden}
+.grid-bg{position:absolute;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:44px 44px;opacity:.45}
+.keys{position:relative;z-index:1;width:300px;height:300px}
+.key{position:absolute;width:76px;height:76px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;border:3px solid rgba(0,0,0,.18);box-shadow:0 7px 0 rgba(0,0,0,.22);cursor:default;user-select:none;transition:.2s;animation:keyFloat var(--d,3s) ease-in-out infinite var(--dl,0s)}
+.key:hover{transform:translateY(-5px)!important;box-shadow:0 12px 0 rgba(0,0,0,.22)}
+@keyframes keyFloat{0%,100%{transform:translateY(0) rotate(var(--r,0deg))}50%{transform:translateY(-8px) rotate(var(--r,0deg))}}
+.key.k1{background:var(--yellow);top:10px;left:110px;--r:-8deg;--d:3.2s}
+.key.k2{background:var(--orange);top:76px;left:28px;--r:5deg;--d:2.8s;--dl:.3s}
+.key.k3{background:var(--purple);top:56px;left:206px;--r:-12deg;--d:3.5s;--dl:.1s}
+.key.k4{background:var(--blue);top:158px;left:14px;--r:-5deg;--d:3s;--dl:.5s}
+.key.k5{background:var(--green);top:174px;left:130px;--r:8deg;--d:2.6s;--dl:.2s}
+.key.k6{background:#ff3d6b;top:136px;left:226px;--r:-3deg;--d:3.3s;--dl:.4s}
+.key.k7{background:var(--cyan);top:242px;left:72px;--r:10deg;--d:2.9s;--dl:.6s}
+.key.k8{background:#f0a500;top:248px;left:198px;--r:-6deg;--d:3.1s}
+.cursor{position:absolute;top:132px;left:148px;z-index:10;font-size:20px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translate(0,0)}50%{transform:translate(-7px,-9px)}}
+
+/* ─── FEATURES GRID ─── */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--border)}
+.feat{padding:32px;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.feat:nth-child(3n){border-right:none}
+.feat-num{font-family:var(--mono);font-size:10px;color:var(--blue);margin-bottom:14px}
+.feat-title{font-size:17px;font-weight:700;margin-bottom:8px;letter-spacing:-.5px}
+.feat-desc{font-size:12px;color:var(--muted);line-height:1.65}
+.tag{display:inline-block;margin-top:12px;padding:3px 9px;font-size:10px;font-family:var(--mono);border-radius:2px}
+.tag-b{background:#dde8ff;color:#1a4aaa}.tag-g{background:#d4f7e0;color:#0d6a2b}
+.tag-o{background:#ffe5d4;color:#a03a10}.tag-p{background:#ede0ff;color:#6b25cc}
+.tag-y{background:#fff8d4;color:#8a6c00}.tag-c{background:#d4f3ff;color:#005a7a}
+
+/* ─── DASHBOARD ─── */
+.dash{display:grid;grid-template-columns:1fr 320px;border-top:1px solid var(--border)}
+.dash-main{padding:28px 32px;border-right:1px solid var(--border)}
+.dash-side{padding:24px}
+.sec-label{font-size:10px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;margin-bottom:10px;letter-spacing:.5px}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px}
+.stat-lbl{font-size:10px;color:var(--muted);margin-bottom:5px;font-family:var(--mono)}
+.stat-val{font-size:22px;font-weight:700;letter-spacing:-.8px}
+.bars{display:flex;align-items:flex-end;gap:6px;height:110px;margin-bottom:20px}
+.bw{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+.bv{font-size:9px;font-family:var(--mono);color:var(--muted)}
+.b{width:100%;border-radius:3px 3px 0 0;transition:.3s;cursor:pointer}
+.b:hover{filter:brightness(.85)}
+.bl{font-size:9px;font-family:var(--mono);color:var(--muted)}
+.cats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
+.cat-box{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:12px;min-width:90px;cursor:default;transition:.15s}
+.cat-box:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.cat-box .cl{font-family:var(--mono);font-size:9px;margin-bottom:4px;font-weight:600}
+.cat-box .cv{font-size:16px;font-weight:700;letter-spacing:-.5px}
+.cat-box .cc{font-size:9px;font-family:var(--mono);margin-top:2px}
+.ins-list{display:flex;flex-direction:column;gap:8px}
+.ins{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:11px 13px;font-size:12px;display:flex;align-items:flex-start;gap:9px;cursor:default;transition:.15s}
+.ins:hover{border-color:var(--blue)}
+.ins-dot{width:7px;height:7px;border-radius:50%;margin-top:3px;flex-shrink:0}
+.ins-txt{color:var(--muted);line-height:1.5}
+.ins-txt strong{color:var(--text)}
+
+/* ─── AI CHAT ─── */
+.chat-wrap{display:grid;grid-template-columns:240px 1fr;border-top:1px solid var(--border);height:620px}
+.chat-sb{border-right:1px solid var(--border);padding:18px;display:flex;flex-direction:column;gap:6px;overflow-y:auto}
+.chat-sb-title{font-size:10px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;margin-bottom:6px;letter-spacing:.5px}
+.prompt{padding:9px 12px;background:var(--card);border:1px solid var(--border);border-radius:5px;font-size:11px;cursor:pointer;transition:.15s;color:var(--muted);line-height:1.4}
+.prompt:hover{border-color:var(--blue);color:var(--text);background:#f5f2ec}
+.chat-main{display:flex;flex-direction:column}
+.msgs{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+.msg{display:flex;gap:8px;align-items:flex-start}
+.av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.av.ai{background:var(--nav);color:var(--blue)}
+.av.u{background:var(--blue);color:#fff}
+.bbl{max-width:78%;padding:9px 13px;border-radius:8px;font-size:12px;line-height:1.65;white-space:pre-wrap}
+.msg.ai .bbl{background:var(--card);border:1px solid var(--border)}
+.msg.u{flex-direction:row-reverse}
+.msg.u .bbl{background:var(--nav);color:#fff}
+.think{display:flex;gap:3px;align-items:center;padding:9px 13px}
+.think span{width:5px;height:5px;border-radius:50%;background:var(--blue);animation:bop .7s infinite}
+.think span:nth-child(2){animation-delay:.12s}
+.think span:nth-child(3){animation-delay:.24s}
+@keyframes bop{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.chat-inp{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px}
+.ci{flex:1;padding:9px 14px;border:1px solid var(--border);border-radius:5px;font-family:var(--font);font-size:12px;background:var(--card);outline:none;transition:.2s}
+.ci:focus{border-color:var(--blue)}
+.cs{padding:9px 18px;background:var(--nav);color:#fff;border:none;border-radius:5px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:.15s;white-space:nowrap}
+.cs:hover{background:#1a2035}
+.cs:disabled{opacity:.5;cursor:not-allowed}
+
+/* ─── TRANSACTIONS ─── */
+.txn-bar{padding:18px 28px;border-bottom:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.txn-search{flex:1;min-width:180px;padding:8px 12px;border:1px solid var(--border);border-radius:4px;font-family:var(--font);font-size:12px;background:var(--card);outline:none}
+.txn-search:focus{border-color:var(--blue)}
+.fbtn{padding:7px 13px;border:1px solid var(--border);border-radius:4px;background:var(--card);font-family:var(--mono);font-size:11px;cursor:pointer;transition:.15s}
+.fbtn:hover{background:#f0ede6;border-color:var(--text)}
+.fbtn.on{background:var(--nav);color:#fff;border-color:var(--nav)}
+table.txn{width:100%;border-collapse:collapse}
+table.txn th{text-align:left;padding:9px 28px;font-size:9px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:#f7f4ef;letter-spacing:.5px}
+table.txn td{padding:13px 28px;font-size:12px;border-bottom:1px solid var(--border)}
+table.txn tr:hover td{background:#f7f4ef}
+.cb{display:inline-block;padding:2px 7px;border-radius:2px;font-size:9px;font-family:var(--mono);font-weight:600}
+.cb-food{background:#fff3e0;color:#e65100}
+.cb-sub{background:#ede0ff;color:#6b25cc}
+.cb-tr{background:#dde8ff;color:#1a4aaa}
+.cb-sh{background:#fce4ec;color:#880e4f}
+.cb-ut{background:#e8f5e9;color:#1b5e20}
+.cb-cr{background:#d4f7e0;color:#0d6a2b}
+.cb-cx{background:#fff8d4;color:#8a6c00}
+.cb-unk{background:#fff3cd;color:#856404}
+.susp{color:var(--orange);font-family:var(--mono);font-size:9px;font-weight:700}
+.dr{color:var(--red);font-weight:700;font-family:var(--mono);font-size:12px}
+.cr{color:var(--green);font-weight:700;font-family:var(--mono);font-size:12px}
+.txn-empty{padding:40px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px}
+
+/* ─── FRAUD ─── */
+.fraud-wrap{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--border)}
+.fraud-l,.fraud-r{padding:28px 32px}
+.fraud-l{border-right:1px solid var(--border)}
+.fraud-title{font-size:20px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
+.fraud-sub{font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.6}
+.upload-z{border:2px dashed var(--border);border-radius:8px;padding:36px;text-align:center;cursor:pointer;transition:.2s;margin-bottom:14px}
+.upload-z:hover{border-color:var(--blue);background:#f0f4ff}
+.upload-z .ico{font-size:28px;margin-bottom:8px}
+.upload-z .ut{font-size:12px;color:var(--muted)}
+.paste-a{width:100%;height:90px;border:1px solid var(--border);border-radius:5px;padding:10px 12px;font-family:var(--font);font-size:12px;resize:none;outline:none;background:var(--card);margin-bottom:10px;transition:.2s}
+.paste-a:focus{border-color:var(--blue)}
+.abtn{width:100%;padding:11px;background:var(--nav);color:#fff;border:none;border-radius:5px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:.15s;letter-spacing:-.3px}
+.abtn:hover{background:#1a2035}
+.scan-bar-wrap{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:18px}
+.scan-bar{height:100%;width:35%;background:var(--blue);border-radius:2px;animation:scan 1.8s ease-in-out infinite}
+@keyframes scan{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
+.risk-ring{display:flex;justify-content:center;margin-bottom:20px}
+.rr{width:130px;height:130px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;border:5px solid var(--border);transition:.5s}
+.rr-num{font-size:34px;font-weight:700;letter-spacing:-2px;transition:.5s}
+.rr-lbl{font-size:9px;font-family:var(--mono);color:var(--muted)}
+.findings{display:flex;flex-direction:column;gap:8px}
+.finding{display:flex;align-items:flex-start;gap:9px;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px 12px}
+.finding-ico{font-size:15px;flex-shrink:0}
+.finding-title{font-size:12px;font-weight:700;margin-bottom:2px}
+.finding-desc{font-size:11px;color:var(--muted);line-height:1.5}
+
+/* ─── CRYPTO ─── */
+.crypto-wrap{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--border);min-height:600px}
+.crypto-panel{padding:28px;border-right:1px solid var(--border)}
+.crypto-panel:last-child{border-right:none}
+.cp-title{font-size:18px;font-weight:700;letter-spacing:-.5px;margin-bottom:4px}
+.cp-sub{font-size:11px;color:var(--muted);margin-bottom:20px;line-height:1.5}
+.crypto-bal-card{background:var(--nav);border-radius:8px;padding:18px;margin-bottom:16px;color:#fff}
+.crypto-bal-label{font-size:9px;font-family:var(--mono);color:#666;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.crypto-bal-amt{font-size:28px;font-weight:700;letter-spacing:-1px;margin-bottom:4px}
+.crypto-bal-usd{font-size:11px;font-family:var(--mono);color:#888}
+.crypto-addr{background:#0d0f14;border:1px solid #1c2030;border-radius:6px;padding:10px 12px;font-family:var(--mono);font-size:10px;color:#6bf;word-break:break-all;margin-bottom:14px;cursor:pointer;transition:.15s}
+.crypto-addr:hover{border-color:var(--blue)}
+.copied-toast{font-size:10px;color:var(--green);font-family:var(--mono);margin-top:-10px;margin-bottom:10px;height:16px;transition:.2s}
+.coin-select{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:5px;font-family:var(--font);font-size:12px;background:var(--card);outline:none;margin-bottom:10px;cursor:pointer}
+.coin-select:focus{border-color:var(--blue)}
+.amount-inp{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:5px;font-family:var(--mono);font-size:14px;background:var(--card);outline:none;margin-bottom:8px;transition:.2s;font-weight:600}
+.amount-inp:focus{border-color:var(--blue)}
+.addr-inp{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:5px;font-family:var(--mono);font-size:11px;background:var(--card);outline:none;margin-bottom:10px;transition:.2s}
+.addr-inp:focus{border-color:var(--blue)}
+.send-btn{width:100%;padding:11px;background:var(--nav);color:#fff;border:none;border-radius:5px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:.15s;letter-spacing:-.3px;margin-bottom:10px}
+.send-btn:hover{background:#1a2035}
+.send-btn:disabled{opacity:.5;cursor:not-allowed}
+.fee-row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-family:var(--mono);padding:6px 0;border-bottom:1px solid var(--border)}
+.fee-row:last-child{border-bottom:none;font-weight:600;color:var(--text)}
+.qr-box{display:flex;flex-direction:column;align-items:center;gap:12px}
+.qr-frame{background:#fff;padding:16px;border-radius:10px;border:2px solid var(--border);display:inline-block}
+.qr-label{font-size:11px;font-family:var(--mono);color:var(--muted);text-align:center}
+.qr-amount-row{display:flex;gap:8px;width:100%;margin-bottom:10px}
+.qr-amount-row input{flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:5px;font-family:var(--mono);font-size:13px;background:var(--card);outline:none}
+.qr-amount-row input:focus{border-color:var(--blue)}
+.gen-qr-btn{width:100%;padding:9px;background:var(--blue);color:#fff;border:none;border-radius:5px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:.15s;margin-bottom:14px}
+.gen-qr-btn:hover{background:#2a5be0}
+.portfolio-list{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.coin-row{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px 13px;display:flex;align-items:center;justify-content:space-between;transition:.15s;cursor:default}
+.coin-row:hover{border-color:var(--blue);transform:translateX(2px)}
+.coin-info{display:flex;align-items:center;gap:10px}
+.coin-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;font-family:var(--mono)}
+.coin-name{font-size:13px;font-weight:700;letter-spacing:-.3px}
+.coin-sym{font-size:10px;font-family:var(--mono);color:var(--muted)}
+.coin-right{text-align:right}
+.coin-val{font-size:13px;font-weight:700;font-family:var(--mono)}
+.coin-change{font-size:10px;font-family:var(--mono)}
+.coin-change.up{color:var(--green)}.coin-change.dn{color:var(--red)}
+.tx-success{background:#d4f7e0;border:1px solid #a5d6a7;border-radius:6px;padding:12px;font-size:12px;color:#0d6a2b;font-family:var(--mono);text-align:center;margin-bottom:10px}
+.tx-error{background:#ffebee;border:1px solid #ef9a9a;border-radius:6px;padding:12px;font-size:12px;color:#c62828;font-family:var(--mono);text-align:center;margin-bottom:10px}
+.network-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:2px;font-size:9px;font-family:var(--mono);font-weight:600}
+.nb-eth{background:#e3f2fd;color:#1565c0}.nb-btc{background:#fff8e1;color:#e65100}
+.nb-sol{background:#f3e5f5;color:#6a1b9a}.nb-matic{background:#ede7f6;color:#4527a0}
+
+/* ─── MODAL ─── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:.2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:28px;max-width:400px;width:90%;transform:translateY(20px);transition:.2s}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal-title{font-size:18px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:20px}
+.modal-close{float:right;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);margin-top:-4px}
+.modal-close:hover{color:var(--text)}
+
+/* ─── TOAST ─── */
+.toast-container{position:fixed;bottom:20px;right:20px;z-index:1000;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--nav);color:#fff;padding:10px 16px;border-radius:6px;font-size:12px;font-family:var(--mono);border-left:3px solid var(--green);animation:slideIn .3s,slideOut .3s 2.7s forwards}
+.toast.warn{border-left-color:var(--orange)}
+.toast.err{border-left-color:var(--red)}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes slideOut{from{opacity:1}to{opacity:0;transform:translateX(100%)}}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+@media(max-width:900px){
+  .hero{grid-template-columns:1fr}
+  .hero-r{display:none}
+  .stat-row{grid-template-columns:repeat(2,1fr)}
+  .feat-grid{grid-template-columns:1fr 1fr}
+  .feat:nth-child(3n){border-right:1px solid var(--border)}
+  .feat:nth-child(2n){border-right:none}
+  .crypto-wrap{grid-template-columns:1fr}
+  .crypto-panel{border-right:none;border-bottom:1px solid var(--border)}
+  .dash{grid-template-columns:1fr}
+  .dash-side{border-top:1px solid var(--border)}
+  .fraud-wrap{grid-template-columns:1fr}
+  .fraud-l{border-right:none;border-bottom:1px solid var(--border)}
+  .chat-wrap{grid-template-columns:1fr}
+  .chat-sb{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toasts"></div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <button class="modal-close" onclick="document.getElementById('modal-overlay').classList.remove('open')">×</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">s<span>U</span>PI</div>
+  <div class="nav-tagline"><b>&lt;AI&gt;</b>&nbsp;Financial Operating System&nbsp;<b>&lt;/AI&gt;</b></div>
+  <div class="nav-right">
+    <div class="nav-bal">
+      <div><div class="lbl">BALANCE</div><div class="amt" id="nav-balance">₹2,84,390</div></div>
+      <div style="width:1px;height:24px;background:#1c2030"></div>
+      <div><div class="lbl">CRYPTO</div><div class="amt" id="nav-crypto">$4,821</div></div>
+    </div>
+    <div class="nav-notify">🔔<div class="notify-dot"></div></div>
+  </div>
+</nav>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab on" onclick="go('home',this)">Overview</div>
+  <div class="tab" onclick="go('dash',this)">Dashboard</div>
+  <div class="tab" onclick="go('ai',this)">AI Assistant</div>
+  <div class="tab" onclick="go('txn',this)">Transactions</div>
+  <div class="tab" onclick="go('fraud',this)">Fraud Detection</div>
+  <div class="tab" onclick="go('crypto',this)">Crypto & QR</div>
+</div>
+
+<!-- ══════ HOME ══════ -->
+<div id="page-home" class="page on">
+  <div class="hero">
+    <div class="hero-l">
+      <div class="hero-badge"><span class="pulse"></span>LIVE DEMO MODE ACTIVE</div>
+      <h1 class="hero-title">sUPI<br><span style="font-size:.44em;letter-spacing:-1px;font-weight:300;color:var(--muted)">Financial<br>Operating<br>System.</span></h1>
+      <p class="hero-sub">AI-powered finance — analyze spending, automate payments, detect scams, and send crypto with QR payments. All in one intelligent OS.</p>
+      <div class="hero-btns">
+        <button class="btn-primary" onclick="go('dash',document.querySelectorAll('.tab')[1])">Open Dashboard →</button>
+        <button class="btn-secondary" onclick="go('ai',document.querySelectorAll('.tab')[2])">Talk to AI</button>
+        <button class="btn-secondary" onclick="go('crypto',document.querySelectorAll('.tab')[5])">Crypto & QR</button>
+      </div>
+    </div>
+    <div class="hero-r">
+      <div class="grid-bg"></div>
+      <div class="keys">
+        <div class="key k1">₹</div><div class="key k2">AI</div><div class="key k3">🔒</div>
+        <div class="key k4">📊</div><div class="key k5">⚡</div><div class="key k6">🎯</div>
+        <div class="key k7">💳</div><div class="key k8">🪙</div>
+        <div class="cursor">↖</div>
+      </div>
+    </div>
+  </div>
+  <div class="feat-grid">
+    <div class="feat"><div class="feat-num">01</div><div class="feat-title">AI Financial Assistant</div><div class="feat-desc">Real Claude AI — ask anything about your finances. Spending analysis, savings advice, subscription audit, and more.</div><span class="tag tag-b">Claude API</span></div>
+    <div class="feat"><div class="feat-num">02</div><div class="feat-title">Smart Transaction Analysis</div><div class="feat-desc">Every rupee tracked and categorized. Spot patterns, recurring charges, and unusual activity automatically.</div><span class="tag tag-g">Realtime</span></div>
+    <div class="feat"><div class="feat-num">03</div><div class="feat-title">Fraud & Scam Detection</div><div class="feat-desc">Paste suspicious messages or upload invoices. AI scans for phishing, fake payments, and social engineering.</div><span class="tag tag-o">AI Scanning</span></div>
+    <div class="feat"><div class="feat-num">04</div><div class="feat-title">Send & Receive Crypto</div><div class="feat-desc">Full crypto wallet — send BTC, ETH, SOL, MATIC. Receive via QR code. Portfolio tracking with live price data.</div><span class="tag tag-y">Web3</span></div>
+    <div class="feat"><div class="feat-num">05</div><div class="feat-title">QR Payment System</div><div class="feat-desc">Generate payment QR codes with custom amounts and notes. Share instantly for quick collections.</div><span class="tag tag-c">QR Codes</span></div>
+    <div class="feat"><div class="feat-num">06</div><div class="feat-title">Payment Automation</div><div class="feat-desc">Define smart rules — pause subscriptions when balance dips, auto-pay bills with anomaly detection.</div><span class="tag tag-p">Autonomous</span></div>
+  </div>
+</div>
+
+<!-- ══════ DASHBOARD ══════ -->
+<div id="page-dash" class="page">
+  <div class="dash">
+    <div class="dash-main">
+      <div class="stat-row">
+        <div class="stat"><div class="stat-lbl">TOTAL BALANCE</div><div class="stat-val" id="ds-bal">₹2,84,390</div></div>
+        <div class="stat"><div class="stat-lbl">MONTHLY SPEND</div><div class="stat-val" style="color:var(--red)" id="ds-spend">₹38,240</div></div>
+        <div class="stat"><div class="stat-lbl">SAVINGS RATE</div><div class="stat-val" style="color:var(--green)">24.3%</div></div>
+        <div class="stat"><div class="stat-lbl">CRYPTO PORTFOLIO</div><div class="stat-val" style="color:var(--purple)">$4,821</div></div>
+      </div>
+      <div class="sec-label">SPENDING — LAST 6 MONTHS</div>
+      <div class="bars">
+        <div class="bw"><div class="bv">₹29k</div><div class="b" style="height:58%;background:#4a7fff"></div><div class="bl">Nov</div></div>
+        <div class="bw"><div class="bv">₹34k</div><div class="b" style="height:72%;background:#4a7fff"></div><div class="bl">Dec</div></div>
+        <div class="bw"><div class="bv">₹26k</div><div class="b" style="height:52%;background:#4a7fff"></div><div class="bl">Jan</div></div>
+        <div class="bw"><div class="bv">₹41k</div><div class="b" style="height:82%;background:#a259ff"></div><div class="bl">Feb</div></div>
+        <div class="bw"><div class="bv">₹33k</div><div class="b" style="height:64%;background:#4a7fff"></div><div class="bl">Mar</div></div>
+        <div class="bw"><div class="bv">₹38k</div><div class="b" style="height:90%;background:#ff6b35"></div><div class="bl">Apr</div></div>
+      </div>
+      <div class="sec-label">CATEGORY BREAKDOWN</div>
+      <div class="cats">
+        <div class="cat-box"><div class="cl" style="color:#e65100">FOOD</div><div class="cv">₹8,420</div><div class="cc" style="color:var(--red)">+18% ↑</div></div>
+        <div class="cat-box"><div class="cl" style="color:#6b25cc">SUBSCRIPTIONS</div><div class="cv">₹3,299</div><div class="cc" style="color:var(--orange)">3 unused ⚠</div></div>
+        <div class="cat-box"><div class="cl" style="color:#1a4aaa">TRANSPORT</div><div class="cv">₹5,180</div><div class="cc" style="color:var(--green)">-5% ↓</div></div>
+        <div class="cat-box"><div class="cl" style="color:#880e4f">SHOPPING</div><div class="cv">₹12,640</div><div class="cc" style="color:var(--red)">+31% ↑</div></div>
+        <div class="cat-box"><div class="cl" style="color:#1b5e20">UTILITIES</div><div class="cv">₹2,180</div><div class="cc" style="color:var(--muted)">stable</div></div>
+        <div class="cat-box"><div class="cl" style="color:#005a7a">CRYPTO</div><div class="cv">$4,821</div><div class="cc" style="color:var(--green)">+12.4% ↑</div></div>
+      </div>
+    </div>
+    <div class="dash-side">
+      <div class="sec-label" style="margin-bottom:12px">AI INSIGHTS</div>
+      <div class="ins-list">
+        <div class="ins"><div class="ins-dot" style="background:var(--red)"></div><div class="ins-txt"><strong>Food spending +18%</strong> this month. Meal prepping could cut ₹2,400/mo.</div></div>
+        <div class="ins"><div class="ins-dot" style="background:var(--purple)"></div><div class="ins-txt"><strong>3 unused subscriptions</strong> costing ₹1,299/mo. Cancel to save ₹15,588/yr.</div></div>
+        <div class="ins"><div class="ins-dot" style="background:var(--orange)"></div><div class="ins-txt">Transaction <strong>MERCH-4829X ₹3,200</strong> flagged suspicious. Review now.</div></div>
+        <div class="ins"><div class="ins-dot" style="background:var(--green)"></div><div class="ins-txt"><strong>₹6,400 annual savings</strong> possible by optimizing recurring payments.</div></div>
+        <div class="ins"><div class="ins-dot" style="background:var(--blue)"></div><div class="ins-txt">At current rate, MacBook Pro <strong>in 2.4 months.</strong></div></div>
+        <div class="ins"><div class="ins-dot" style="background:var(--yellow)"></div><div class="ins-txt"><strong>ETH portfolio</strong> up 12.4% this week. Consider taking partial profit.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ AI ASSISTANT ══════ -->
+<div id="page-ai" class="page">
+  <div class="chat-wrap">
+    <div class="chat-sb">
+      <div class="chat-sb-title">Suggested Prompts</div>
+      <div class="prompt" onclick="firePrompt('Analyze my spending this month')">Analyze my spending this month</div>
+      <div class="prompt" onclick="firePrompt('Can I afford a MacBook next month?')">Can I afford a MacBook?</div>
+      <div class="prompt" onclick="firePrompt('What subscriptions should I cancel?')">Cancel subscriptions?</div>
+      <div class="prompt" onclick="firePrompt('How much did I spend on food this month?')">Food spend breakdown</div>
+      <div class="prompt" onclick="firePrompt('Detect suspicious activity in my account')">Detect suspicious activity</div>
+      <div class="prompt" onclick="firePrompt('Show my savings forecast for 6 months')">6-month savings forecast</div>
+      <div class="prompt" onclick="firePrompt('Should I invest more in crypto right now?')">Crypto investment advice</div>
+      <div class="prompt" onclick="firePrompt('Create an automation rule to pause Netflix if my balance drops below ₹20,000')">Create payment rule</div>
+      <div class="prompt" onclick="firePrompt('What is my net worth?')">Calculate net worth</div>
+    </div>
+    <div class="chat-main">
+      <div class="msgs" id="msgs">
+        <div class="msg ai"><div class="av ai">sU</div><div class="bbl">Hello! I'm sUPI, your AI financial OS. I have full context of your transactions, subscriptions, crypto holdings, and spending patterns. Ask me anything — from spending analysis to crypto strategy.</div></div>
+      </div>
+      <div class="chat-inp">
+        <input class="ci" id="ci" placeholder="Ask anything about your finances..." onkeydown="if(event.key==='Enter')sendMsg()"/>
+        <button class="cs" id="cs" onclick="sendMsg()">Send →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TRANSACTIONS ══════ -->
+<div id="page-txn" class="page">
+  <div class="txn-bar">
+    <input class="txn-search" id="txn-search" placeholder="Search transactions, merchants, amounts..." oninput="filterTxns()"/>
+    <button class="fbtn" id="fAll" onclick="setFilter('all',this)">All</button>
+    <button class="fbtn" id="fFood" onclick="setFilter('food',this)">Food</button>
+    <button class="fbtn" id="fSub" onclick="setFilter('sub',this)">Subscriptions</button>
+    <button class="fbtn" id="fCrypto" onclick="setFilter('crypto',this)">Crypto</button>
+    <button class="fbtn" id="fSusp" onclick="setFilter('suspicious',this)">⚠ Suspicious</button>
+  </div>
+  <div style="overflow-x:auto">
+  <table class="txn" id="txn-table">
+    <thead><tr><th>Date</th><th>Merchant</th><th>Category</th><th>Status</th><th>Amount</th></tr></thead>
+    <tbody id="txn-body"></tbody>
+  </table>
+  </div>
+</div>
+
+<!-- ══════ FRAUD DETECTION ══════ -->
+<div id="page-fraud" class="page">
+  <div class="fraud-wrap">
+    <div class="fraud-l">
+      <div class="fraud-title">Fraud Detection</div>
+      <div class="fraud-sub">Paste a suspicious message, payment request, or describe a transaction. Claude AI will analyze it for threats, phishing patterns, and scam indicators.</div>
+      <div class="upload-z" onclick="document.getElementById('fraud-text').value='URGENT: Your SBI account has been suspended. Click http://sbi-verify-now.xyz/login to restore access immediately. Enter OTP and card details to verify identity.';toast('Sample phishing message loaded','warn')">
+        <div class="ico">📎</div>
+        <div class="ut">Drop files here or click to load a sample phishing message<br><span style="font-family:var(--mono);font-size:10px;color:#aaa">PNG, PDF, JPG, TXT supported</span></div>
+      </div>
+      <textarea class="paste-a" id="fraud-text" placeholder="Paste a suspicious SMS, email, UPI request, or invoice text here..."></textarea>
+      <button class="abtn" onclick="analyzeFraud()">Analyze for Threats →</button>
+    </div>
+    <div class="fraud-r">
+      <div class="sec-label" style="margin-bottom:14px">ANALYSIS RESULT</div>
+      <div class="scan-bar-wrap"><div class="scan-bar"></div></div>
+      <div class="risk-ring"><div class="rr" id="rr"><div class="rr-num" id="rr-num" style="color:var(--muted)">--</div><div class="rr-lbl">RISK SCORE</div></div></div>
+      <div class="findings" id="fraud-findings">
+        <div class="finding"><div class="finding-ico">🔍</div><div><div class="finding-title">Ready to scan</div><div class="finding-desc">Paste a message or click the upload zone to load a sample, then click Analyze.</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ CRYPTO & QR ══════ -->
+<div id="page-crypto" class="page">
+  <div class="crypto-wrap">
+
+    <!-- PORTFOLIO -->
+    <div class="crypto-panel">
+      <div class="cp-title">Portfolio</div>
+      <div class="cp-sub">Your crypto holdings across all networks.</div>
+      <div class="portfolio-list" id="portfolio-list"></div>
+      <div class="sec-label" style="margin-bottom:8px">TOTAL VALUE</div>
+      <div style="font-size:28px;font-weight:700;letter-spacing:-1px;margin-bottom:4px" id="portfolio-total">$4,821.40</div>
+      <div style="font-size:11px;font-family:var(--mono);color:var(--green)">+$532.10 (+12.4%) this week</div>
+      <div style="margin-top:16px;font-size:10px;font-family:var(--mono);color:var(--muted)">WALLET ADDRESS (ETH)</div>
+      <div class="crypto-addr" id="eth-addr" onclick="copyAddr()" title="Click to copy">0x4a2f...8e3d</div>
+      <div class="copied-toast" id="copied-toast"></div>
+    </div>
+
+    <!-- SEND -->
+    <div class="crypto-panel">
+      <div class="cp-title">Send Crypto</div>
+      <div class="cp-sub">Send crypto to any wallet address. Fees calculated in real-time.</div>
+      <div id="send-feedback"></div>
+      <div class="sec-label">SELECT COIN</div>
+      <select class="coin-select" id="send-coin" onchange="updateFees()">
+        <option value="BTC">₿ Bitcoin (BTC) — 0.0142 BTC</option>
+        <option value="ETH" selected>⬨ Ethereum (ETH) — 1.284 ETH</option>
+        <option value="SOL">◎ Solana (SOL) — 12.5 SOL</option>
+        <option value="MATIC">⬡ Polygon (MATIC) — 480 MATIC</option>
+      </select>
+      <div class="sec-label">AMOUNT</div>
+      <input class="amount-inp" type="number" id="send-amount" placeholder="0.00" step="0.001" min="0" oninput="updateFees()"/>
+      <div class="sec-label">RECIPIENT ADDRESS</div>
+      <input class="addr-inp" type="text" id="send-addr" placeholder="0x... or bc1... or wallet address"/>
+      <button class="send-btn" onclick="executeSend()">Send →</button>
+      <div class="sec-label" style="margin-bottom:6px">TRANSACTION SUMMARY</div>
+      <div class="fee-row"><span>Network</span><span id="fee-network">—</span></div>
+      <div class="fee-row"><span>Amount</span><span id="fee-amount">0.00</span></div>
+      <div class="fee-row"><span>Gas / Fee</span><span id="fee-gas">—</span></div>
+      <div class="fee-row"><span>Total</span><span id="fee-total">—</span></div>
+    </div>
+
+    <!-- RECEIVE / QR -->
+    <div class="crypto-panel">
+      <div class="cp-title">Receive & QR</div>
+      <div class="cp-sub">Generate a QR code to receive crypto or payments instantly.</div>
+      <div class="sec-label">SELECT COIN TO RECEIVE</div>
+      <select class="coin-select" id="recv-coin" onchange="generateQR()">
+        <option value="ETH">⬨ Ethereum (ETH)</option>
+        <option value="BTC">₿ Bitcoin (BTC)</option>
+        <option value="SOL">◎ Solana (SOL)</option>
+        <option value="MATIC">⬡ Polygon (MATIC)</option>
+        <option value="UPI">🇮🇳 UPI Payment</option>
+      </select>
+      <div class="sec-label">AMOUNT (OPTIONAL)</div>
+      <div class="qr-amount-row">
+        <input type="number" id="recv-amount" placeholder="0.00" step="0.001" oninput="generateQR()"/>
+        <input type="text" id="recv-note" placeholder="Note (optional)" oninput="generateQR()"/>
+      </div>
+      <button class="gen-qr-btn" onclick="generateQR()">Generate QR Code</button>
+      <div class="qr-box">
+        <div class="qr-frame"><div id="qr-canvas"></div></div>
+        <div class="qr-label" id="qr-label">Scan to pay</div>
+        <div id="qr-addr-display" style="font-family:var(--mono);font-size:9px;color:var(--muted);text-align:center;word-break:break-all;max-width:220px"></div>
+        <button class="fbtn" onclick="copyQRAddr()" style="font-size:10px">Copy Address</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────
+const state = {
+  balance: 284390,
+  cryptoUSD: 4821.40,
+
+  txnFilter: 'all',
+  portfolio: [
+    {sym:'BTC',name:'Bitcoin',icon:'₿',color:'#F7931A',bg:'#fff8e1',amt:0.0142,price:67420,change:+3.2},
+    {sym:'ETH',name:'Ethereum',icon:'⬨',color:'#627EEA',bg:'#e8eaff',amt:1.284,price:3218,change:+8.1},
+    {sym:'SOL',name:'Solana',icon:'◎',color:'#9945FF',bg:'#f3e5f5',amt:12.5,price:142,change:+15.4},
+    {sym:'MATIC',name:'Polygon',icon:'⬡',color:'#8247E5',bg:'#ede7f6',amt:480,price:0.89,change:-2.1},
+  ],
+  wallets: {
+    ETH:'0x4a2fB83cD7e4a91c2F6e8D3b501eA749f8E3d9C1',
+    BTC:'bc1q9x2k7p4m8n3j6h5w0r2e1t4y8u7i5o3p1a2s',
+    SOL:'7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV',
+    MATIC:'0x4a2fB83cD7e4a91c2F6e8D3b501eA749f8E3d9C1',
+    UPI:'supi@upi',
+  }
+};
+
+const txns = [
+  {date:'22 May 2026',merchant:'Swiggy',note:'Food delivery',cat:'food',cb:'cb-food',status:'CLEARED',amt:-840,suspicious:false},
+  {date:'21 May 2026',merchant:'Netflix',note:'Monthly subscription',cat:'sub',cb:'cb-sub',status:'CLEARED',amt:-649,suspicious:false},
+  {date:'20 May 2026',merchant:'MERCH-4829X',note:'Unknown merchant',cat:'unknown',cb:'cb-unk',status:'SUSPICIOUS',amt:-3200,suspicious:true},
+  {date:'19 May 2026',merchant:'Ola Cabs',note:'Ride sharing',cat:'transport',cb:'cb-tr',status:'CLEARED',amt:-380,suspicious:false},
+  {date:'18 May 2026',merchant:'Salary Credit',note:'Monthly salary',cat:'income',cb:'cb-cr',status:'CLEARED',amt:85000,suspicious:false},
+  {date:'17 May 2026',merchant:'Amazon',note:'Electronics purchase',cat:'shopping',cb:'cb-sh',status:'CLEARED',amt:-4299,suspicious:false},
+  {date:'16 May 2026',merchant:'Jio Broadband',note:'Internet bill',cat:'utilities',cb:'cb-ut',status:'CLEARED',amt:-999,suspicious:false},
+  {date:'15 May 2026',merchant:'ETH Transfer',note:'Crypto purchase',cat:'crypto',cb:'cb-cx',status:'CONFIRMED',amt:-18432,suspicious:false},
+  {date:'14 May 2026',merchant:'Zomato',note:'Food delivery',cat:'food',cb:'cb-food',status:'CLEARED',amt:-620,suspicious:false},
+  {date:'13 May 2026',merchant:'Spotify',note:'Subscription',cat:'sub',cb:'cb-sub',status:'CLEARED',amt:-179,suspicious:false},
+  {date:'12 May 2026',merchant:'BTC Received',note:'Crypto received',cat:'crypto',cb:'cb-cx',status:'CONFIRMED',amt:9200,suspicious:false},
+  {date:'11 May 2026',merchant:'Rapido',note:'Bike taxi',cat:'transport',cb:'cb-tr',status:'CLEARED',amt:-85,suspicious:false},
+  {date:'10 May 2026',merchant:'UNKNOWN-TX99',note:'Unverified source',cat:'unknown',cb:'cb-unk',status:'SUSPICIOUS',amt:-1500,suspicious:true},
+  {date:'09 May 2026',merchant:'BSNL',note:'Utility bill',cat:'utilities',cb:'cb-ut',status:'CLEARED',amt:-599,suspicious:false},
+  {date:'08 May 2026',merchant:'Nykaa',note:'Beauty products',cat:'shopping',cb:'cb-sh',status:'CLEARED',amt:-2100,suspicious:false},
+];
+
+// ─── NAVIGATION ──────────────────────────────────────────
+function go(id, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('page-'+id).classList.add('on');
+  el.classList.add('on');
+  if(id==='txn') renderTxns();
+  if(id==='crypto') { renderPortfolio(); generateQR(); updateFees(); }
+}
+
+// ─── TOAST ───────────────────────────────────────────────
+function toast(msg, type='ok') {
+  const t = document.createElement('div');
+  t.className = 'toast' + (type==='warn'?' warn':type==='err'?' err':'');
+  t.textContent = msg;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(()=>t.remove(), 3100);
+}
+
+// ─── TRANSACTIONS ─────────────────────────────────────────
+function renderTxns() {
+  const q = document.getElementById('txn-search').value.toLowerCase();
+  const f = state.txnFilter;
+  const tbody = document.getElementById('txn-body');
+  const filtered = txns.filter(t => {
+    const matchQ = !q || t.merchant.toLowerCase().includes(q) || t.note.toLowerCase().includes(q) || String(Math.abs(t.amt)).includes(q);
+    const matchF = f==='all' || (f==='suspicious'&&t.suspicious) || t.cat===f;
+    return matchQ && matchF;
+  });
+  if (!filtered.length) { tbody.innerHTML=`<tr><td colspan="5" class="txn-empty">No transactions found.</td></tr>`; return; }
+  tbody.innerHTML = filtered.map(t => `
+    <tr>
+      <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">${t.date}</td>
+      <td><strong>${t.merchant}</strong><br><span style="font-size:10px;color:var(--muted)">${t.note}</span></td>
+      <td><span class="cb ${t.cb}">${t.cat.toUpperCase()}</span></td>
+      <td>${t.suspicious ? '<span class="susp">⚠ SUSPICIOUS</span>' : `<span style="font-size:10px;color:var(--green);font-family:var(--mono)">✓ ${t.status}</span>`}</td>
+      <td class="${t.amt<0?'dr':'cr'}">${t.amt<0?'-':'+'} ₹${Math.abs(t.amt).toLocaleString('en-IN')}</td>
+    </tr>`).join('');
+}
+function filterTxns() { renderTxns(); }
+function setFilter(f, el) {
+  state.txnFilter = f;
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  renderTxns();
+}
+document.getElementById('fAll').classList.add('on');
+
+// ─── PORTFOLIO ────────────────────────────────────────────
+function renderPortfolio() {
+  const list = document.getElementById('portfolio-list');
+  let total = 0;
+  list.innerHTML = state.portfolio.map(c => {
+    const val = c.amt * c.price;
+    total += val;
+    return `<div class="coin-row">
+      <div class="coin-info">
+        <div class="coin-icon" style="background:${c.bg};color:${c.color}">${c.icon}</div>
+        <div><div class="coin-name">${c.name}</div><div class="coin-sym">${c.amt} ${c.sym}</div></div>
+      </div>
+      <div class="coin-right">
+        <div class="coin-val">$${val.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <div class="coin-change ${c.change>=0?'up':'dn'}">${c.change>=0?'+':''}${c.change}%</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('portfolio-total').textContent = '$'+total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+// ─── COPY ADDRESS ─────────────────────────────────────────
+function copyAddr() {
+  navigator.clipboard.writeText(state.wallets.ETH).catch(()=>{});
+  document.getElementById('copied-toast').textContent = '✓ Address copied!';
+  setTimeout(()=>document.getElementById('copied-toast').textContent='', 2000);
+  toast('Wallet address copied');
+}
+function copyQRAddr() {
+  const coin = document.getElementById('recv-coin').value;
+  navigator.clipboard.writeText(state.wallets[coin]).catch(()=>{});
+  toast('Address copied to clipboard');
+}
+
+// ─── SEND CRYPTO ──────────────────────────────────────────
+const fees = { BTC:{net:'Bitcoin',fee:0.00015,sym:'BTC'}, ETH:{net:'Ethereum',fee:0.0024,sym:'ETH'}, SOL:{net:'Solana',fee:0.000025,sym:'SOL'}, MATIC:{net:'Polygon',fee:0.01,sym:'MATIC'} };
+function updateFees() {
+  const coin = document.getElementById('send-coin').value;
+  const amt = parseFloat(document.getElementById('send-amount').value)||0;
+  const f = fees[coin];
+  document.getElementById('fee-network').innerHTML = `<span class="network-badge nb-${coin.toLowerCase()}">${f.net}</span>`;
+  document.getElementById('fee-amount').textContent = amt ? `${amt} ${coin}` : '—';
+  document.getElementById('fee-gas').textContent = `${f.fee} ${coin}`;
+  document.getElementById('fee-total').textContent = amt ? `${(amt+f.fee).toFixed(6)} ${coin}` : '—';
+}
+function executeSend() {
+  const coin = document.getElementById('send-coin').value;
+  const amt = parseFloat(document.getElementById('send-amount').value);
+  const addr = document.getElementById('send-addr').value.trim();
+  const fb = document.getElementById('send-feedback');
+  if (!amt || amt<=0) { fb.innerHTML=`<div class="tx-error">Enter a valid amount.</div>`; return; }
+  if (!addr) { fb.innerHTML=`<div class="tx-error">Enter a recipient address.</div>`; return; }
+  if (addr.length < 10) { fb.innerHTML=`<div class="tx-error">Invalid wallet address.</div>`; return; }
+  fb.innerHTML=`<div style="text-align:center;padding:10px;font-family:var(--mono);font-size:11px;color:var(--muted)">Broadcasting transaction...</div>`;
+  setTimeout(()=>{
+    const txHash = '0x'+Array.from({length:12},()=>Math.floor(Math.random()*16).toString(16)).join('');
+    fb.innerHTML=`<div class="tx-success">✓ Transaction Sent!<br>${amt} ${coin} → ${addr.slice(0,8)}...<br>TX: ${txHash}</div>`;
+    toast(`Sent ${amt} ${coin} successfully`);
+    document.getElementById('send-amount').value='';
+    document.getElementById('send-addr').value='';
+    updateFees();
+    // add to txns
+    txns.unshift({date:new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),merchant:`${coin} Transfer`,note:`Sent to ${addr.slice(0,8)}...`,cat:'crypto',cb:'cb-cx',status:'CONFIRMED',amt:-Math.round(amt*fees[coin.toLowerCase()]||100),suspicious:false});
+  },1600);
+}
+
+// ─── QR CODE ──────────────────────────────────────────────
+let qrInstance = null;
+function generateQR() {
+  const coin = document.getElementById('recv-coin').value;
+  const amt = document.getElementById('recv-amount').value;
+  const note = document.getElementById('recv-note').value;
+  const addr = state.wallets[coin];
+  let qrData = addr;
+  if (coin==='ETH'||coin==='MATIC') qrData = `ethereum:${addr}${amt?'?value='+amt:''}`;
+  else if (coin==='BTC') qrData = `bitcoin:${addr}${amt?'?amount='+amt:''}`;
+  else if (coin==='SOL') qrData = `solana:${addr}${amt?'?amount='+amt:''}`;
+  else if (coin==='UPI') qrData = `upi://pay?pa=${addr}&pn=sUPI${amt?'&am='+amt:''}${note?'&tn='+encodeURIComponent(note):''}`;
+  const canvas = document.getElementById('qr-canvas');
+  canvas.innerHTML = '';
+  try {
+    qrInstance = new QRCode(canvas, {text:qrData,width:160,height:160,colorDark:'#0d0f14',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+  } catch(e) { canvas.innerHTML = `<div style="width:160px;height:160px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--muted);font-family:var(--mono)">QR generation error</div>`; }
+  document.getElementById('qr-label').textContent = `Scan to send${amt?' '+amt+' ':' '}${coin}${note?' · '+note:''}`;
+  document.getElementById('qr-addr-display').textContent = addr;
+}
+
+// ─── AI CHAT (SMART MOCK — NO API) ───────────────────────
+const mockResponses = [
+  {
+    keys: ['spending','analyze','analysis','breakdown','month'],
+    reply: `Here's your spending analysis for May 2026:\n\n📊 Total spent: ₹38,240\n🍔 Food: ₹8,420 (+18% vs April)\n🛍 Shopping: ₹12,640 (+31%)\n🚗 Transport: ₹5,180 (-5%)\n📱 Subscriptions: ₹3,299\n💡 Utilities: ₹2,180\n\n⚠️ Shopping is your fastest-growing category — 3 large Amazon purchases account for ₹8,100 of that.\n\n💡 Tip: Setting a ₹10,000 shopping cap next month would save ₹2,640.`
+  },
+  {
+    keys: ['macbook','afford','mac','laptop','next month'],
+    reply: `Based on your current financial profile:\n\n💰 Current balance: ₹2,84,390\n📈 Monthly savings: ~₹20,500\n💻 MacBook Pro 14" cost: ~₹1,99,900\n\n✅ Yes, you can afford it comfortably from savings.\n\nAfter purchase you'd have ₹84,490 left — above the recommended 3-month emergency buffer of ₹74,000.\n\n🟢 Verdict: Go for it. Your finances are healthy.`
+  },
+  {
+    keys: ['subscriptions','cancel','subscription','unused'],
+    reply: `I found 3 underused subscriptions (not accessed in 30+ days):\n\n❌ Disney+ Hotstar — ₹299/mo (last used: 47 days ago)\n❌ Notion Pro — ₹700/mo (free plan covers your usage)\n❌ Gym membership — ₹723/mo (checked in 2x last month)\n\n💸 Cancel all three → saves ₹1,722/mo → ₹20,664/year\n\nKeep: Netflix ₹649, Spotify ₹179, Adobe ₹749 — all actively used.`
+  },
+  {
+    keys: ['food','eat','swiggy','zomato','restaurant'],
+    reply: `Your food spending this month:\n\n🍔 Swiggy: ₹3,240 — 11 orders avg ₹295/order\n🍕 Zomato: ₹2,890 — 9 orders avg ₹321/order\n🛒 BigBasket: ₹1,680 — groceries\n☕ Café visits: ₹610\n\nTotal: ₹8,420 — up ₹1,280 (+18%) from last month.\n\n📅 Trend: 68% of orders happen Fri–Sun. Meal prepping on Sundays could cut this by ~₹2,500/month.`
+  },
+  {
+    keys: ['suspicious','fraud','scam','unusual','detect','activity'],
+    reply: `🔍 Scanning last 30 days of transactions...\n\n⚠️ 2 suspicious transactions found:\n\n1. MERCH-4829X — ₹3,200 on 20 May\n   • Unknown merchant, no registration found\n   • Transaction from foreign IP address\n   • Risk score: 87/100 — HIGH RISK\n\n2. UNKNOWN-TX99 — ₹1,500 on 10 May\n   • Unverified source, no merchant info\n   • Risk score: 64/100 — MEDIUM RISK\n\n🛡️ Recommended: Dispute both transactions and change your UPI PIN.`
+  },
+  {
+    keys: ['savings','forecast','save','future','6 month','months'],
+    reply: `📈 6-Month Savings Forecast\n\nBased on avg monthly savings of ₹20,500:\n\nJun 2026: ₹3,04,890\nJul 2026: ₹3,25,390\nAug 2026: ₹3,45,890\nSep 2026: ₹3,66,390\nOct 2026: ₹3,86,890\nNov 2026: ₹4,07,390\n\n🎯 You'll cross ₹4 lakh by November 2026.\n\n💡 If you cancel 3 unused subscriptions (+₹1,722/mo), you'd hit ₹4L in October instead.`
+  },
+  {
+    keys: ['crypto','invest','bitcoin','eth','ethereum','solana'],
+    reply: `📊 Your Crypto Portfolio — $4,821 total\n\n₿ BTC: 0.0142 @ $67,420 = $957 (+3.2%)\n⬨ ETH: 1.284 @ $3,218 = $4,132 (+8.1%) ← strongest performer\n◎ SOL: 12.5 @ $142 = $1,775 (+15.4%) ← highest growth\n⬡ MATIC: 480 @ $0.89 = $427 (-2.1%) ← only loser\n\n💡 Suggestion: SOL is outperforming — consider DCA-ing ₹5,000/month into SOL.\n⚠️ MATIC is down — hold or cut losses depending on your timeline.`
+  },
+  {
+    keys: ['net worth','worth','total','wealth'],
+    reply: `💼 Your Net Worth Summary\n\nBank Balance: ₹2,84,390\nCrypto Portfolio: ~₹4,01,352 ($4,821)\nMonthly Income: ₹85,000\n\nEstimated Total Net Worth: ~₹6,85,742\n\n📈 Growth rate: ~₹22,000/month at current savings pace.\n\n🎯 At this rate you'll cross ₹10 lakh by Q1 2027.`
+  },
+  {
+    keys: ['automation','rule','auto','pause','netflix','payment'],
+    reply: `⚡ Automation Rule Created:\n\n"Pause all subscriptions if balance drops below ₹20,000"\n\nStatus: ✅ Active\nMonitors: Netflix, Spotify, Disney+, Notion, Adobe, Gym\nCheck frequency: Every 6 hours\nLast checked: Just now — balance ₹2,84,390 — all subscriptions running normally.\n\n➕ Want to add more rules? Try: "Alert me if any single transaction exceeds ₹5,000"`
+  },
+];
+
+const fallbackReplies = [
+  "Based on your financial data, everything looks healthy. Your balance of ₹2,84,390 gives you solid runway and your 24.3% savings rate is above average. Keep it up!",
+  "Looking at your transaction history, your biggest opportunity is in the shopping category — up 31% this month. A ₹10,000 monthly cap would make a meaningful difference.",
+  "Your crypto portfolio at $4,821 is performing well — ETH and SOL are your strongest assets right now. Consider rebalancing MATIC if it dips further.",
+  "Quick summary: You earn ₹85,000/month, spend ~₹38,240, and save ~₹20,500. That's a solid financial foundation. The main leaks are food delivery (+18%) and unused subscriptions.",
+];
+let fallbackIdx = 0;
+
+function sendMsg() {
+  const input = document.getElementById('ci');
+  const btn = document.getElementById('cs');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  btn.disabled = true;
+  appendMsg('u', text);
+  const thinkEl = appendThinking();
+  const lower = text.toLowerCase();
+  const match = mockResponses.find(r => r.keys.some(k => lower.includes(k)));
+  const reply = match ? match.reply : fallbackReplies[fallbackIdx++ % fallbackReplies.length];
+  setTimeout(() => {
+    thinkEl.remove();
+    appendMsg('ai', reply);
+    btn.disabled = false;
+  }, 900 + Math.random() * 600);
+}
+
+function firePrompt(text) {
+  go('ai', document.querySelectorAll('.tab')[2]);
+  setTimeout(()=>{ document.getElementById('ci').value=text; sendMsg(); }, 100);
+}
+
+function appendMsg(role, text) {
+  const msgs = document.getElementById('msgs');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  div.innerHTML = `<div class="av ${role}">${role==='ai'?'sU':'ME'}</div><div class="bbl">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function appendThinking() {
+  const msgs = document.getElementById('msgs');
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.innerHTML = `<div class="av ai">sU</div><div class="bbl"><div class="think"><span></span><span></span><span></span></div></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+// ─── FRAUD DETECTION (HEURISTIC — NO API) ────────────────
+function analyzeFraud() {
+  const text = document.getElementById('fraud-text').value.trim();
+  if (!text) { toast('Paste a message first','warn'); return; }
+  const rr = document.getElementById('rr');
+  const rrnum = document.getElementById('rr-num');
+  const findings = document.getElementById('fraud-findings');
+  rr.style.borderColor = 'var(--blue)';
+  rrnum.style.color = 'var(--blue)';
+  rrnum.textContent = '...';
+  findings.innerHTML = `<div class="finding"><div class="finding-ico">⏳</div><div><div class="finding-title">Analyzing...</div><div class="finding-desc">Scanning across 40+ threat vectors...</div></div></div>`;
+
+  setTimeout(() => {
+    const lower = text.toLowerCase();
+    // Keyword groups
+    const urgencyWords  = ['urgent','immediately','right now','asap','act now','limited time','expire','expiring'];
+    const phishWords    = ['suspended','blocked','verify','verification','otp','password','credentials','login','account details'];
+    const greedWords    = ['winner','won','prize','lottery','congratulations','claim','reward','free','gift'];
+    const bankWords     = ['sbi','hdfc','icici','axis','kotak','rbi','neft','upi','kyc','pan card','aadhaar'];
+    const linkWords     = ['http://','bit.ly','tinyurl','click here','follow the link','tap here'];
+    const impersonWords = ['amazon','flipkart','paytm','gpay','phonepe','government','income tax','police','court'];
+
+    const hUrgency  = urgencyWords.filter(w=>lower.includes(w));
+    const hPhish    = phishWords.filter(w=>lower.includes(w));
+    const hGreed    = greedWords.filter(w=>lower.includes(w));
+    const hBank     = bankWords.filter(w=>lower.includes(w));
+    const hLink     = linkWords.filter(w=>lower.includes(w));
+    const hImpers   = impersonWords.filter(w=>lower.includes(w));
+    const hasHttp   = text.includes('http://');
+    const allCaps   = (text.match(/[A-Z]{4,}/g)||[]).length > 1;
+    const hasPhone  = /\b[6-9]\d{9}\b/.test(text);
+
+    let score = 0;
+    score += hUrgency.length  * 12;
+    score += hPhish.length    * 18;
+    score += hGreed.length    * 16;
+    score += hBank.length     *  8;
+    score += hLink.length     * 15;
+    score += hImpers.length   * 10;
+    if (hasHttp)  score += 20;
+    if (allCaps)  score += 10;
+    if (hasPhone) score += 8;
+    score = Math.min(97, score);
+
+    const color = score>60?'var(--red)':score>30?'var(--orange)':'var(--green)';
+    rr.style.borderColor = color;
+    rrnum.style.color = color;
+    rrnum.textContent = score;
+
+    let f = [];
+    if (score > 60) {
+      f.push({icon:'🚨',title:'High Risk — Likely Phishing',desc:`Detected ${hPhish.length+hUrgency.length} critical threat signals: ${[...hUrgency,...hPhish].slice(0,4).join(', ')}. Classic social engineering attack pattern.`});
+      if (hasHttp||hLink.length)  f.push({icon:'🔗',title:'Unsafe Link Detected',desc:'Message contains an unencrypted HTTP link or shortened URL — a strong indicator of a phishing site designed to steal your credentials.'});
+      if (hImpers.length)         f.push({icon:'🏦',title:'Brand Impersonation',desc:`Message impersonates a trusted brand: "${hImpers[0]}". Scammers clone logos and names to appear legitimate.`});
+      if (hGreed.length)          f.push({icon:'🎁',title:'Too-Good-To-Be-True Offer',desc:`Words like "${hGreed[0]}" are hallmarks of advance-fee fraud. No legitimate service asks for details to claim a prize.`});
+    } else if (score > 30) {
+      f.push({icon:'⚠️',title:'Suspicious Signals Found',desc:`${[...hUrgency,...hPhish,...hGreed].length} warning keywords detected. Treat this message with caution and verify through official channels.`});
+      if (hBank.length) f.push({icon:'🏦',title:'Financial Institution Mentioned',desc:`References to "${hBank[0]}" detected. Never click links in messages — go directly to the official app or website.`});
+      f.push({icon:'🔍',title:'Verify Before Acting',desc:'Do not share OTPs, PINs, or card details. If this seems legitimate, contact the sender through their official website or helpline.'});
+    } else {
+      f.push({icon:'✅',title:'No Major Threats Detected',desc:'Content does not match known phishing, scam, or social engineering patterns. Risk score is low.'});
+      f.push({icon:'ℹ️',title:'Stay Vigilant',desc:'Even safe-looking messages can be misleading. Never share OTPs or passwords with anyone, including "bank officials".'});
+    }
+
+    findings.innerHTML = f.map(x=>`<div class="finding"><div class="finding-ico">${x.icon}</div><div><div class="finding-title">${x.title}</div><div class="finding-desc">${x.desc}</div></div></div>`).join('');
+    toast(score>60?'High risk — do not engage!':score>30?'Suspicious content detected':'Looks safe', score>60?'err':score>30?'warn':'ok');
+  }, 1400);
+}
+
+// ─── MODAL ───────────────────────────────────────────────
+function closeModal(e) { if(e.target===document.getElementById('modal-overlay')) document.getElementById('modal-overlay').classList.remove('open'); }
+
+// ─── INIT ─────────────────────────────────────────────────
+updateFees();
+generateQR();
+</script>
+</body>
+</html>
